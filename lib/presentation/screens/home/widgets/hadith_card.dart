@@ -113,9 +113,9 @@ class _HadithCardState extends ConsumerState<HadithCard>
 
                 const SizedBox(height: 8),
 
-                // ── Arabic hadith text (expandable) ───────────────────────
+                // ── Hadith text (expandable) ───────────────────────
                 Directionality(
-                  textDirection: TextDirection.rtl,
+                  textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
                   child: AnimatedCrossFade(
                     duration: const Duration(milliseconds: 250),
                     crossFadeState: _expanded
@@ -123,8 +123,8 @@ class _HadithCardState extends ConsumerState<HadithCard>
                         : CrossFadeState.showFirst,
                     // Collapsed: 3 lines max
                     firstChild: Text(
-                      widget.hadith.arabicText,
-                      textAlign: TextAlign.right,
+                      widget.hadith.getLocalizedText(isRtl),
+                      textAlign: isRtl ? TextAlign.right : TextAlign.left,
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodyMedium?.copyWith(
@@ -134,8 +134,8 @@ class _HadithCardState extends ConsumerState<HadithCard>
                     ),
                     // Expanded: full text
                     secondChild: Text(
-                      widget.hadith.arabicText,
-                      textAlign: TextAlign.right,
+                      widget.hadith.getLocalizedText(isRtl),
+                      textAlign: isRtl ? TextAlign.right : TextAlign.left,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         height: 1.7,
                         fontSize: 14,
@@ -194,7 +194,7 @@ class _HadithCardState extends ConsumerState<HadithCard>
   }
 
   void _copyText() {
-    Clipboard.setData(ClipboardData(text: widget.hadith.arabicText));
+    Clipboard.setData(ClipboardData(text: widget.hadith.getLocalizedText(widget.isRtl)));
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: const Row(children: [
         Icon(Icons.check_rounded, color: Colors.white, size: 16),

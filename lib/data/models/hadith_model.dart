@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:hadith_everyday/domain/entities/hadith_entity.dart';
+import 'package:hadith_everyday/domain/entities/image_style.dart';
 
 /// Data model — extends the domain entity with JSON serialization.
 /// The data layer maps raw API JSON → HadithModel → HadithEntity.
@@ -17,9 +18,7 @@ class HadithModel extends HadithEntity {
     required super.status,
     required super.fetchedAt,
     super.imagePath,
-    super.bgStyleIndex,
-    super.fontScale,
-    super.textAlignIndex,
+    super.imageStyle = ImageStyle.defaultStyle,
   });
 
   // ─── From API JSON ──────────────────────────────────────────────────────────
@@ -93,9 +92,13 @@ class HadithModel extends HadithEntity {
       status: json['status'] as String? ?? 'Sahih',
       fetchedAt: DateTime.parse(json['fetchedAt'] as String),
       imagePath: json['imagePath'] as String?,
-      bgStyleIndex: json['bgStyleIndex'] as int?,
-      fontScale: json['fontScale'] == null ? null : (json['fontScale'] as num).toDouble(),
-      textAlignIndex: json['textAlignIndex'] as int?,
+      imageStyle: json['imageStyle'] != null 
+          ? ImageStyle.fromJson(json['imageStyle'] as Map<String, dynamic>)
+          : ImageStyle(
+              bgStyleIndex: json['bgStyleIndex'] as int? ?? 0,
+              fontScale: json['fontScale'] == null ? 1.0 : (json['fontScale'] as num).toDouble(),
+              textAlignIndex: json['textAlignIndex'] as int? ?? 0,
+            ),
     );
   }
 
@@ -113,9 +116,7 @@ class HadithModel extends HadithEntity {
       'status': status,
       'fetchedAt': fetchedAt.toIso8601String(),
       'imagePath': imagePath,
-      'bgStyleIndex': bgStyleIndex,
-      'fontScale': fontScale,
-      'textAlignIndex': textAlignIndex,
+      'imageStyle': imageStyle.toJson(),
     };
   }
 
@@ -140,9 +141,7 @@ class HadithModel extends HadithEntity {
       status: entity.status,
       fetchedAt: entity.fetchedAt,
       imagePath: entity.imagePath,
-      bgStyleIndex: entity.bgStyleIndex,
-      fontScale: entity.fontScale,
-      textAlignIndex: entity.textAlignIndex,
+      imageStyle: entity.imageStyle,
     );
   }
 }

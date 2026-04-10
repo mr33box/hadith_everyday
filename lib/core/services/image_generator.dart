@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:hadith_everyday/core/constants/app_constants.dart';
 import 'package:hadith_everyday/core/errors/failures.dart';
 import 'package:hadith_everyday/domain/entities/hadith_entity.dart';
+import 'package:hadith_everyday/domain/entities/image_style.dart';
 
 /// Hadith background color styles
 enum BgStyle { warm, dark, light, custom }
@@ -20,9 +21,7 @@ class HadithImageGenerator {
   /// [devicePixelRatio]) for a perfect full-screen fit on the target device.
   static Future<(String?, Failure?)> generateAndSave({
     required HadithEntity hadith,
-    BgStyle bgStyle = BgStyle.warm,
-    double fontScale = 1.0,
-    TextAlign textAlign = TextAlign.center,
+    required ImageStyle style,
     // Device-native dimensions
     double? deviceWidth,
     double? deviceHeight,
@@ -30,27 +29,16 @@ class HadithImageGenerator {
     required String titleString,
     required String sourceString,
     required bool isRtl,
-    // Custom colors (used when bgStyle == BgStyle.custom)
-    Color? customBgColor1,
-    Color? customBgColor2,
-    Color? customTextColor,
-    Color? customTitleColor,
   }) async {
     try {
       final bytes = await _renderToBytes(
         hadith: hadith,
-        bgStyle: bgStyle,
-        fontScale: fontScale,
-        textAlign: textAlign,
+        style: style,
         titleString: titleString,
         sourceString: sourceString,
         isRtl: isRtl,
         w: deviceWidth ?? AppConstants.wallpaperWidth,
         h: deviceHeight ?? AppConstants.wallpaperHeight,
-        customBgColor1: customBgColor1,
-        customBgColor2: customBgColor2,
-        customTextColor: customTextColor,
-        customTitleColor: customTitleColor,
       );
       final path = await _saveToFile(bytes, hadith.id);
       return (path, null);
@@ -65,19 +53,16 @@ class HadithImageGenerator {
 
   static Future<Uint8List> _renderToBytes({
     required HadithEntity hadith,
-    required BgStyle bgStyle,
-    required double fontScale,
-    required TextAlign textAlign,
+    required ImageStyle style,
     required String titleString,
     required String sourceString,
     required bool isRtl,
     required double w,
     required double h,
-    Color? customBgColor1,
-    Color? customBgColor2,
-    Color? customTextColor,
-    Color? customTitleColor,
   }) async {
+    final bgStyle = BgStyle.values[style.bgStyleIndex.clamp(0, BgStyle.values.length - 1)];
+    final fontScale = style.fontScale;
+    final textAlign = style.alignment;
     // Use compact spacing constants relative to height
     final double paddingH = w * 0.074;       // ~80px on 1080
     final double paddingTop = h * 0.08;      // top safe zone
@@ -88,53 +73,53 @@ class HadithImageGenerator {
 
     // ── Background gradient ───────────────────────────────────────────────────
     final gradient = _buildGradient(bgStyle, w, h,
-        color1: customBgColor1, color2: customBgColor2);
+        color1: style.bgColor1, color2: style.bgColor2);
     canvas.drawRect(Rect.fromLTWH(0, 0, w, h), Paint()..shader = gradient);
 
     // ── Decorative ornaments (overlay circles) ────────────────────────────────
-    _drawOrnament(canvas, w, h, bgStyle, customBgColor1: customBgColor1);
+    _drawOrnament(canvas, w, h, bgStyle, customBgColor1: style.bgColor1);
 
     // ── Calculate vertical layout ─────────────────────────────────────────────
     // We will compute each painter first, then position them in one pass.
     final titleFontSize = 48.0 * fontScale * (w / 1080);
-    final bodyFontSize = _computeFontSize(hadith.arabicText.length, fontScale) * (w / 1080);
+    final bodyFontSize = _computeFontSize(hadith.getLocalizedText(isRtl).length, fontScale) * (w / 1080);
     final sourceFontSize = 34.0 * fontScale * (w / 1080);
 
     // Title
     final titlePainter = _buildTextPainter(
       text: titleString,
       fontSize: titleFontSize,
-      color: customTitleColor ?? _goldColor(bgStyle),
+      color: style.titleColor ?? _goldColor(bgStyle),
       fontWeight: FontWeight.bold,
       textAlign: TextAlign.center,
       isRtl: isRtl,
       maxWidth: w - paddingH * 2,
     );
-    titlePainter.layout(maxWidth: w - paddingH * 2);
+    titlePainter.layout(minWidth: w - paddingH * 2, maxWidth: w - paddingH * 2);
 
     // Body
     final bodyPainter = _buildTextPainter(
-      text: hadith.arabicText,
+      text: hadith.getLocalizedText(isRtl),
       fontSize: bodyFontSize,
-      color: customTextColor ?? _textColor(bgStyle),
+      color: style.textColor ?? _textColor(bgStyle),
       fontWeight: FontWeight.normal,
       textAlign: textAlign,
       isRtl: isRtl,
       maxWidth: w - paddingH * 2,
     );
-    bodyPainter.layout(maxWidth: w - paddingH * 2);
+    bodyPainter.layout(minWidth: w - paddingH * 2, maxWidth: w - paddingH * 2);
 
     // Source
     final sourcePainter = _buildTextPainter(
       text: sourceString,
       fontSize: sourceFontSize,
-      color: (customTitleColor ?? _goldColor(bgStyle)).withOpacity(0.85),
+      color: (style.titleColor ?? _goldColor(bgStyle)).withOpacity(0.85),
       fontWeight: FontWeight.w500,
       textAlign: TextAlign.center,
       isRtl: isRtl,
       maxWidth: w - paddingH * 2,
     );
-    sourcePainter.layout(maxWidth: w - paddingH * 2);
+    sourcePainter.layout(minWidth: w - paddingH * 2, maxWidth: w - paddingH * 2);
 
     // ── Compute vertical layout — CENTERED in image ───────────────────────────
     final double titleBodyGap  = h * 0.025;
@@ -151,9 +136,11 @@ class HadithImageGenerator {
         bodySourceGap +
         sourcePainter.height;
 
-    // Center the content block vertically; never higher than paddingTop
-    final double startY =
-        ((h - totalContentH) / 2).clamp(paddingTop, h * 0.55);
+    // ── Compute vertical layout mapped to ImageStyle offset ─────────────────
+    final double defaultStartY = (h - totalContentH) / 2;
+    // Map textPosY fraction to actual pixel bounds representing the anchor center
+    final double centerOffsetPixels = (style.textPosY * h) - (h / 2);
+    final double startY = (defaultStartY + centerOffsetPixels).clamp(paddingTop, h * 0.95);
 
     final double dividerY = startY + titlePainter.height + dividerGap;
     final double bodyY    = dividerY + dividerHeight + titleBodyGap;
@@ -172,7 +159,7 @@ class HadithImageGenerator {
 
     // ── Divider line ──────────────────────────────────────────────────────────
     final dividerPaint = Paint()
-      ..color = (customTitleColor ?? _goldColor(bgStyle)).withOpacity(0.45)
+      ..color = (style.titleColor ?? _goldColor(bgStyle)).withOpacity(0.45)
       ..strokeWidth = 1.2;
     canvas.drawLine(
       Offset(paddingH * 2.5, dividerY),
@@ -188,7 +175,7 @@ class HadithImageGenerator {
     sourcePainter.paint(canvas, Offset(sourceX, sourceY));
 
     // ── Bottom decorative dots ────────────────────────────────────────────────
-    _drawBottomDots(canvas, w, h, bgStyle, customBgColor1: customBgColor1);
+    _drawBottomDots(canvas, w, h, bgStyle, customBgColor1: style.bgColor1);
 
     canvas.restore();
 

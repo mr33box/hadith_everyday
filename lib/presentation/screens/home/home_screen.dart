@@ -147,12 +147,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           ],
         ),
 
-        body: RefreshIndicator(
-          onRefresh: () =>
-              ref.read(hadithFetchProvider.notifier).fetchAndProcess(),
-          color: theme.colorScheme.primary,
-          child: CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
+        body: CustomScrollView(
+            physics: const BouncingScrollPhysics(),
             slivers: [
               // ── Offline banner ──────────────────────────────────────────
               if (fetchState.isOffline)
@@ -367,7 +363,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               ),
             ],
           ),
-        ),
 
         // ── FAB: New Hadith ──────────────────────────────────────────────────
         floatingActionButton: ScaleTransition(

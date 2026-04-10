@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hadith_everyday/domain/entities/hadith_entity.dart';
 import 'package:hadith_everyday/presentation/providers/hadith_provider.dart';
-import 'package:hadith_everyday/presentation/providers/settings_provider.dart';
 import 'package:hadith_everyday/l10n/app_localizations.dart';
 
 /// Full-screen gallery of all generated hadith wallpaper images.
@@ -127,7 +126,6 @@ class _FullScreenImage extends ConsumerStatefulWidget {
 
 class _FullScreenImageState extends ConsumerState<_FullScreenImage> {
   static const _channel = MethodChannel('com.haditheveryday/wallpaper');
-  bool _applying = false;
 
   @override
   Widget build(BuildContext context) {
@@ -150,86 +148,12 @@ class _FullScreenImageState extends ConsumerState<_FullScreenImage> {
           ),
         ],
       ),
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          // Image viewer
-          InteractiveViewer(
-            panEnabled: true,
-            scaleEnabled: true,
-            child: Center(child: Image.file(File(widget.hadith.imagePath!))),
-          ),
-
-          // "Apply This Style" bottom button
-          Positioned(
-            bottom: 0, left: 0, right: 0,
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                  colors: [Colors.black87, Colors.transparent],
-                ),
-              ),
-              child: FilledButton.icon(
-                icon: _applying
-                    ? const SizedBox(
-                        width: 18, height: 18,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white))
-                    : const Icon(Icons.check_circle_rounded),
-                label: Text(
-                  _applying ? l10n.generatingImage : 'Apply this style',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                style: FilledButton.styleFrom(
-                  backgroundColor: theme.colorScheme.primary,
-                  minimumSize: const Size.fromHeight(50),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
-                ),
-                onPressed: _applying ? null : () => _applyStyle(context, l10n),
-              ),
-            ),
-          ),
-        ],
+      body: InteractiveViewer(
+        panEnabled: true,
+        scaleEnabled: true,
+        child: Center(child: Image.file(File(widget.hadith.imagePath!))),
       ),
     );
-  }
-
-  /// Apply the style settings saved in settings provider and regenerate.
-  Future<void> _applyStyle(BuildContext ctx, AppLocalizations l10n) async {
-    // 1. Load saved style data from selected gallery image
-    final bg = widget.hadith.bgStyleIndex;
-    final fs = widget.hadith.fontScale;
-    final ta = widget.hadith.textAlignIndex;
-
-    // 2. Update current editor state
-    final settingsNotifier = ref.read(settingsProvider.notifier);
-    if (bg != null) await settingsNotifier.setBgStyle(bg);
-    if (fs != null) await settingsNotifier.setFontScale(fs);
-    if (ta != null) await settingsNotifier.setTextAlign(ta);
-
-    setState(() => _applying = true);
-    
-    // 3. Regenerate current hadith image using this style (forces wallpaper)
-    await ref.read(hadithFetchProvider.notifier).regenerateCurrentHadith(forceWallpaper: true);
-    
-    if (mounted) {
-      setState(() => _applying = false);
-      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-        content: Row(children: [
-          const Icon(Icons.check_rounded, color: Colors.white, size: 16),
-          const SizedBox(width: 8),
-          Text(l10n.successWallpaper),
-        ]),
-        backgroundColor: Colors.green.shade700,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        duration: const Duration(seconds: 3),
-      ));
-    }
   }
 
   Future<void> _saveToGallery(BuildContext context) async {

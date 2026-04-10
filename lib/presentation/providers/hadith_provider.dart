@@ -13,6 +13,7 @@ import 'package:hadith_everyday/data/repositories/hadith_repository_impl.dart';
 import 'package:hadith_everyday/domain/entities/hadith_entity.dart';
 import 'package:hadith_everyday/domain/usecases/fetch_daily_hadith.dart';
 import 'package:hadith_everyday/domain/usecases/hadith_history_usecases.dart';
+import 'package:hadith_everyday/domain/entities/image_style.dart';
 import 'package:hadith_everyday/presentation/providers/settings_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -195,8 +196,7 @@ class HadithFetchNotifier extends StateNotifier<FetchState> {
       // 2. Generate image at device native resolution
       final (imagePath, imgFailure) = await HadithImageGenerator.generateAndSave(
         hadith: hadith,
-        bgStyle: settings.bgStyle,
-        fontScale: settings.fontScale,
+        style: settings.imageStyle,
         deviceWidth: screenSize.width,
         deviceHeight: screenSize.height,
         isRtl: settings.language == AppConstants.langAr,
@@ -206,10 +206,6 @@ class HadithFetchNotifier extends StateNotifier<FetchState> {
         sourceString: settings.language == AppConstants.langAr
             ? 'رواه ${hadith.getLocalizedBookName(true)}'
             : 'Narrated by ${hadith.getLocalizedBookName(false)}',
-        customBgColor1: settings.bgStyleIndex == 3 ? settings.bgColor1 : null,
-        customBgColor2: settings.bgStyleIndex == 3 ? settings.bgColor2 : null,
-        customTextColor: settings.bgStyleIndex == 3 ? settings.textColor : null,
-        customTitleColor: settings.bgStyleIndex == 3 ? settings.titleColor : null,
       );
 
       if (imgFailure != null || imagePath == null) {
@@ -222,9 +218,7 @@ class HadithFetchNotifier extends StateNotifier<FetchState> {
 
       final savedHadith = hadith.copyWith(
         imagePath: imagePath,
-        bgStyleIndex: settings.bgStyleIndex,
-        fontScale: settings.fontScale,
-        textAlignIndex: settings.textAlignIndex,
+        imageStyle: settings.imageStyle,
       );
 
       // 3. Save to storage
@@ -287,8 +281,7 @@ class HadithFetchNotifier extends StateNotifier<FetchState> {
 
       final (imagePath, imgFailure) = await HadithImageGenerator.generateAndSave(
         hadith: currentHadith,
-        bgStyle: settings.bgStyle,
-        fontScale: settings.fontScale,
+        style: settings.imageStyle,
         deviceWidth: screenSize.width,
         deviceHeight: screenSize.height,
         isRtl: settings.language == AppConstants.langAr,
@@ -298,10 +291,6 @@ class HadithFetchNotifier extends StateNotifier<FetchState> {
         sourceString: settings.language == AppConstants.langAr
             ? 'رواه ${currentHadith.getLocalizedBookName(true)}'
             : 'Narrated by ${currentHadith.getLocalizedBookName(false)}',
-        customBgColor1: settings.bgStyleIndex == 3 ? settings.bgColor1 : null,
-        customBgColor2: settings.bgStyleIndex == 3 ? settings.bgColor2 : null,
-        customTextColor: settings.bgStyleIndex == 3 ? settings.textColor : null,
-        customTitleColor: settings.bgStyleIndex == 3 ? settings.titleColor : null,
       );
 
       if (imgFailure != null || imagePath == null) {
@@ -331,6 +320,7 @@ class HadithFetchNotifier extends StateNotifier<FetchState> {
           failure: UnknownFailure(e.toString()));
     }
   }
+
 
   void reset() => state = const FetchState();
 }

@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hadith_everyday/core/constants/app_constants.dart';
 import 'package:hadith_everyday/core/services/background_service.dart';
 import 'package:hadith_everyday/core/services/image_generator.dart';
+import 'package:hadith_everyday/domain/entities/image_style.dart';
 
 // ─── App Settings Model ────────────────────────────────────────────────────────
 
@@ -13,59 +14,30 @@ class AppSettings {
     this.language = AppConstants.langAr,
     this.autoWallpaper = true,
     this.intervalMinutes = AppConstants.defaultIntervalMinutes,
-    this.bgStyleIndex = 0,
-    this.fontScale = 1.0,
-    this.textAlignIndex = 0,
-    // Design customization
-    this.fontFamilyIndex = 0,   // 0=Cairo, 1=Default, 2=Serif
-    this.bgColor1 = const Color(0xFFF5DEB3),
-    this.bgColor2 = const Color(0xFF8B5E3C),
-    this.textColor = const Color(0xFF2C1A0E),
-    this.titleColor = const Color(0xFF8B4513),
+    this.imageStyle = ImageStyle.defaultStyle,
   });
 
   final bool isDarkMode;
   final String language;
   final bool autoWallpaper;
   final int intervalMinutes;
-  final int bgStyleIndex;
-  final double fontScale;
-  final int textAlignIndex;
-  final int fontFamilyIndex;
-  final Color bgColor1;
-  final Color bgColor2;
-  final Color textColor;
-  final Color titleColor;
+  final ImageStyle imageStyle;
 
-  BgStyle get bgStyle => BgStyle.values[bgStyleIndex.clamp(0, BgStyle.values.length - 1)];
+  BgStyle get bgStyle => BgStyle.values[imageStyle.bgStyleIndex.clamp(0, BgStyle.values.length - 1)];
 
   AppSettings copyWith({
     bool? isDarkMode,
     String? language,
     bool? autoWallpaper,
     int? intervalMinutes,
-    int? bgStyleIndex,
-    double? fontScale,
-    int? textAlignIndex,
-    int? fontFamilyIndex,
-    Color? bgColor1,
-    Color? bgColor2,
-    Color? textColor,
-    Color? titleColor,
+    ImageStyle? imageStyle,
   }) {
     return AppSettings(
       isDarkMode: isDarkMode ?? this.isDarkMode,
       language: language ?? this.language,
       autoWallpaper: autoWallpaper ?? this.autoWallpaper,
       intervalMinutes: intervalMinutes ?? this.intervalMinutes,
-      bgStyleIndex: bgStyleIndex ?? this.bgStyleIndex,
-      fontScale: fontScale ?? this.fontScale,
-      textAlignIndex: textAlignIndex ?? this.textAlignIndex,
-      fontFamilyIndex: fontFamilyIndex ?? this.fontFamilyIndex,
-      bgColor1: bgColor1 ?? this.bgColor1,
-      bgColor2: bgColor2 ?? this.bgColor2,
-      textColor: textColor ?? this.textColor,
-      titleColor: titleColor ?? this.titleColor,
+      imageStyle: imageStyle ?? this.imageStyle,
     );
   }
 }
@@ -86,14 +58,17 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
       autoWallpaper: _prefs.getBool(AppConstants.prefKeyAutoWallpaper) ?? true,
       intervalMinutes: _prefs.getInt(AppConstants.prefKeyIntervalMinutes) ??
           AppConstants.defaultIntervalMinutes,
-      bgStyleIndex: _prefs.getInt(AppConstants.prefKeyBgStyle) ?? 0,
-      fontScale: _prefs.getDouble(AppConstants.prefKeyFontScale) ?? 1.0,
-      textAlignIndex: _prefs.getInt(AppConstants.prefKeyTextAlign) ?? 0,
-      fontFamilyIndex: _prefs.getInt(AppConstants.prefKeyFontFamily) ?? 0,
-      bgColor1: Color(_prefs.getInt(AppConstants.prefKeyBgColor1) ?? const Color(0xFFF5DEB3).value),
-      bgColor2: Color(_prefs.getInt(AppConstants.prefKeyBgColor2) ?? const Color(0xFF8B5E3C).value),
-      textColor: Color(_prefs.getInt(AppConstants.prefKeyTextColor) ?? const Color(0xFF2C1A0E).value),
-      titleColor: Color(_prefs.getInt(AppConstants.prefKeyTitleColor) ?? const Color(0xFF8B4513).value),
+      imageStyle: ImageStyle(
+        bgStyleIndex: _prefs.getInt(AppConstants.prefKeyBgStyle) ?? 0,
+        fontScale: _prefs.getDouble(AppConstants.prefKeyFontScale) ?? 1.0,
+        textAlignIndex: _prefs.getInt(AppConstants.prefKeyTextAlign) ?? 0,
+        bgColor1: Color(_prefs.getInt(AppConstants.prefKeyBgColor1) ?? const Color(0xFFF5DEB3).value),
+        bgColor2: Color(_prefs.getInt(AppConstants.prefKeyBgColor2) ?? const Color(0xFF8B5E3C).value),
+        textColor: Color(_prefs.getInt(AppConstants.prefKeyTextColor) ?? const Color(0xFF2C1A0E).value),
+        titleColor: Color(_prefs.getInt(AppConstants.prefKeyTitleColor) ?? const Color(0xFF8B4513).value),
+        textPosX: _prefs.getDouble('pref_text_pos_x') ?? 0.5,
+        textPosY: _prefs.getDouble('pref_text_pos_y') ?? 0.5,
+      ),
     );
   }
 
@@ -125,55 +100,31 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
     }
   }
 
-  Future<void> setBgStyle(int index) async {
-    await _prefs.setInt(AppConstants.prefKeyBgStyle, index);
-    state = state.copyWith(bgStyleIndex: index);
+  Future<void> updateImageStyle(ImageStyle style) async {
+    await _prefs.setInt(AppConstants.prefKeyBgStyle, style.bgStyleIndex);
+    await _prefs.setDouble(AppConstants.prefKeyFontScale, style.fontScale);
+    await _prefs.setInt(AppConstants.prefKeyTextAlign, style.textAlignIndex);
+    await _prefs.setDouble('pref_text_pos_x', style.textPosX);
+    await _prefs.setDouble('pref_text_pos_y', style.textPosY);
+    if (style.bgColor1 != null) await _prefs.setInt(AppConstants.prefKeyBgColor1, style.bgColor1!.value);
+    if (style.bgColor2 != null) await _prefs.setInt(AppConstants.prefKeyBgColor2, style.bgColor2!.value);
+    if (style.textColor != null) await _prefs.setInt(AppConstants.prefKeyTextColor, style.textColor!.value);
+    if (style.titleColor != null) await _prefs.setInt(AppConstants.prefKeyTitleColor, style.titleColor!.value);
+    
+    state = state.copyWith(imageStyle: style);
   }
 
-  Future<void> setFontScale(double scale) async {
-    await _prefs.setDouble(AppConstants.prefKeyFontScale, scale);
-    state = state.copyWith(fontScale: scale);
-  }
-
-  Future<void> setTextAlign(int index) async {
-    await _prefs.setInt(AppConstants.prefKeyTextAlign, index);
-    state = state.copyWith(textAlignIndex: index);
-  }
-
-  Future<void> setFontFamily(int index) async {
-    await _prefs.setInt(AppConstants.prefKeyFontFamily, index);
-    state = state.copyWith(fontFamilyIndex: index);
-  }
-
-  Future<void> setBgColor1(Color color) async {
-    await _prefs.setInt(AppConstants.prefKeyBgColor1, color.value);
-    state = state.copyWith(bgColor1: color);
-  }
-
-  Future<void> setBgColor2(Color color) async {
-    await _prefs.setInt(AppConstants.prefKeyBgColor2, color.value);
-    state = state.copyWith(bgColor2: color);
-  }
-
-  Future<void> setTextColor(Color color) async {
-    await _prefs.setInt(AppConstants.prefKeyTextColor, color.value);
-    state = state.copyWith(textColor: color);
-  }
-
-  Future<void> setTitleColor(Color color) async {
-    await _prefs.setInt(AppConstants.prefKeyTitleColor, color.value);
-    state = state.copyWith(titleColor: color);
-  }
+  // Backwards compatibility wrappers leveraging the single source of truth
+  Future<void> setBgStyle(int index) => updateImageStyle(state.imageStyle.copyWith(bgStyleIndex: index));
+  Future<void> setFontScale(double scale) => updateImageStyle(state.imageStyle.copyWith(fontScale: scale));
+  Future<void> setTextAlign(int index) => updateImageStyle(state.imageStyle.copyWith(textAlignIndex: index));
+  Future<void> setBgColor1(Color color) => updateImageStyle(state.imageStyle.copyWith(bgColor1: color));
+  Future<void> setBgColor2(Color color) => updateImageStyle(state.imageStyle.copyWith(bgColor2: color));
+  Future<void> setTextColor(Color color) => updateImageStyle(state.imageStyle.copyWith(textColor: color));
+  Future<void> setTitleColor(Color color) => updateImageStyle(state.imageStyle.copyWith(titleColor: color));
 
   void resetDesign() {
-    const defaults = AppSettings();
-    setBgColor1(defaults.bgColor1);
-    setBgColor2(defaults.bgColor2);
-    setTextColor(defaults.textColor);
-    setTitleColor(defaults.titleColor);
-    setFontScale(defaults.fontScale);
-    setTextAlign(defaults.textAlignIndex);
-    setBgStyle(defaults.bgStyleIndex);
+    updateImageStyle(const ImageStyle());
   }
 }
 

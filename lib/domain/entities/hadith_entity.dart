@@ -1,5 +1,7 @@
 /// Pure domain entity — no serialization, no framework dependencies.
 /// This is what use-cases and UI interact with.
+import 'package:hadith_everyday/domain/entities/image_style.dart';
+
 class HadithEntity {
   const HadithEntity({
     required this.id,
@@ -14,9 +16,7 @@ class HadithEntity {
     required this.status,
     required this.fetchedAt,
     this.imagePath,
-    this.bgStyleIndex,
-    this.fontScale,
-    this.textAlignIndex,
+    this.imageStyle = ImageStyle.defaultStyle,
   });
 
   /// Unique ID from the API
@@ -56,12 +56,18 @@ class HadithEntity {
   final String? imagePath;
 
   // ─── Style Data (Saved when image is generated) ───────────────────────────
-  final int? bgStyleIndex;
-  final double? fontScale;
-  final int? textAlignIndex;
+  final ImageStyle imageStyle;
 
   /// Returns the source label shown on the wallpaper image
   String get sourceLabel => bookName;
+
+  /// Returns localized text body
+  String getLocalizedText(bool isAr) {
+    if (!isAr && englishText.isNotEmpty) {
+      return englishText;
+    }
+    return arabicText;
+  }
 
   /// Returns localized book name
   String getLocalizedBookName(bool isAr) {
@@ -98,9 +104,7 @@ class HadithEntity {
     String? status,
     DateTime? fetchedAt,
     String? imagePath,
-    int? bgStyleIndex,
-    double? fontScale,
-    int? textAlignIndex,
+    ImageStyle? imageStyle,
   }) {
     return HadithEntity(
       id: id ?? this.id,
@@ -115,9 +119,7 @@ class HadithEntity {
       status: status ?? this.status,
       fetchedAt: fetchedAt ?? this.fetchedAt,
       imagePath: imagePath ?? this.imagePath,
-      bgStyleIndex: bgStyleIndex ?? this.bgStyleIndex,
-      fontScale: fontScale ?? this.fontScale,
-      textAlignIndex: textAlignIndex ?? this.textAlignIndex,
+      imageStyle: imageStyle ?? this.imageStyle,
     );
   }
 

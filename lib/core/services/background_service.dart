@@ -3,6 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:hadith_everyday/domain/entities/image_style.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:hadith_everyday/core/constants/app_constants.dart';
 import 'package:hadith_everyday/core/services/image_generator.dart';
@@ -55,10 +56,17 @@ void callbackDispatcher() {
       final (hadith, failure) = await fetchUseCase(usedIds: usedIds);
       if (failure != null || hadith == null) return Future.value(false);
 
-      // Get user's image style preferences
-      final bgStyleIndex = prefs.getInt(AppConstants.prefKeyBgStyle) ?? 0;
-      final fontScale = prefs.getDouble(AppConstants.prefKeyFontScale) ?? 1.0;
-      final bgStyle = BgStyle.values[bgStyleIndex];
+      final imageStyle = ImageStyle(
+        bgStyleIndex: prefs.getInt(AppConstants.prefKeyBgStyle) ?? 0,
+        fontScale: prefs.getDouble(AppConstants.prefKeyFontScale) ?? 1.0,
+        textAlignIndex: prefs.getInt(AppConstants.prefKeyTextAlign) ?? 0,
+        bgColor1: prefs.getInt(AppConstants.prefKeyBgColor1) != null ? Color(prefs.getInt(AppConstants.prefKeyBgColor1)!) : null,
+        bgColor2: prefs.getInt(AppConstants.prefKeyBgColor2) != null ? Color(prefs.getInt(AppConstants.prefKeyBgColor2)!) : null,
+        textColor: prefs.getInt(AppConstants.prefKeyTextColor) != null ? Color(prefs.getInt(AppConstants.prefKeyTextColor)!) : null,
+        titleColor: prefs.getInt(AppConstants.prefKeyTitleColor) != null ? Color(prefs.getInt(AppConstants.prefKeyTitleColor)!) : null,
+        textPosX: prefs.getDouble('pref_text_pos_x') ?? 0.5,
+        textPosY: prefs.getDouble('pref_text_pos_y') ?? 0.5,
+      );
 
       final lang = prefs.getString(AppConstants.prefKeyLanguage) ?? AppConstants.langAr;
       final isRtl = lang == AppConstants.langAr;
@@ -66,8 +74,7 @@ void callbackDispatcher() {
       // Generate wallpaper image
       final (imagePath, imgFailure) = await HadithImageGenerator.generateAndSave(
         hadith: hadith,
-        bgStyle: bgStyle,
-        fontScale: fontScale,
+        style: imageStyle,
         isRtl: isRtl,
         titleString: isRtl ? 'قال رسول الله ﷺ' : 'The Messenger of Allah ﷺ said:',
         sourceString: isRtl 
@@ -77,7 +84,7 @@ void callbackDispatcher() {
       if (imgFailure != null || imagePath == null) return Future.value(false);
 
       // Save to local storage with image path
-      final savedHadith = hadith.copyWith(imagePath: imagePath);
+      final savedHadith = hadith.copyWith(imagePath: imagePath, imageStyle: imageStyle);
       await saveUseCase(savedHadith);
 
       // Set as wallpaper

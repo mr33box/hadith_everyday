@@ -19,10 +19,25 @@ class DesignEditorScreen extends ConsumerStatefulWidget {
 }
 
 class _DesignEditorScreenState extends ConsumerState<DesignEditorScreen> {
-  // Draggable text position (0.0–1.0, Y fraction of available range)
-  double _textYFraction = 0.5; // centered by default
-
   bool _applying = false;
+  
+  // ── Local Drag State for 60fps performance ──
+  // By using a ValueNotifier locally, we avoid triggering global Riverpod
+  // state updates (and SharedPreferences I/O) on every pixel moved.
+  late final ValueNotifier<double> _dragNotifier;
+  bool _isDragging = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _dragNotifier = ValueNotifier(0.5); // Initial dummy, synced in build
+  }
+
+  @override
+  void dispose() {
+    _dragNotifier.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,25 +46,10 @@ class _DesignEditorScreenState extends ConsumerState<DesignEditorScreen> {
     final notifier = ref.read(settingsProvider.notifier);
     final theme = Theme.of(context);
 
-    // Build painter from current settings — repaints instantly on setState
-    final painter = HadithPreviewPainter(
-      hadith: widget.hadith,
-      bgStyle: settings.bgStyle,
-      fontScale: settings.fontScale,
-      textAlign: _resolveTextAlign(settings.textAlignIndex),
-      isRtl: settings.language == AppConstants.langAr,
-      titleString: settings.language == AppConstants.langAr 
-          ? 'قال رسول الله ﷺ' 
-          : 'The Messenger of Allah ﷺ said:',
-      sourceString: settings.language == AppConstants.langAr
-          ? 'رواه ${widget.hadith.getLocalizedBookName(true)}'
-          : 'Narrated by ${widget.hadith.getLocalizedBookName(false)}',
-      customBgColor1: settings.bgStyleIndex == 3 ? settings.bgColor1 : null,
-      customBgColor2: settings.bgStyleIndex == 3 ? settings.bgColor2 : null,
-      customTextColor: settings.bgStyleIndex == 3 ? settings.textColor : null,
-      customTitleColor: settings.bgStyleIndex == 3 ? settings.titleColor : null,
-      textOffsetFraction: Offset(0.5, _textYFraction),
-    );
+    // Sync local drag baseline with global settings if no active drag is happening.
+    if (!_isDragging) {
+      _dragNotifier.value = settings.imageStyle.textPosY;
+    }
 
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
@@ -61,7 +61,6 @@ class _DesignEditorScreenState extends ConsumerState<DesignEditorScreen> {
             label: Text(l10n.editorReset),
             onPressed: () {
               notifier.resetDesign();
-              setState(() => _textYFraction = 0.5);
             },
           ),
         ],
@@ -86,20 +85,45 @@ class _DesignEditorScreenState extends ConsumerState<DesignEditorScreen> {
                         color: Colors.black,
                         child: LayoutBuilder(
                           builder: (ctx2, constraints) {
-                            return GestureDetector(
-                              onPanUpdate: (details) {
-                                setState(() {
-                                  _textYFraction = (_textYFraction +
+                              return GestureDetector(
+                                onPanStart: (_) => _isDragging = true,
+                                onPanUpdate: (details) {
+                                  // Update local ValueNotifier (super lightweight)
+                                  _dragNotifier.value = (_dragNotifier.value + 
                                           details.delta.dy / constraints.maxHeight)
                                       .clamp(0.0, 1.0);
-                                });
-                              },
+                                },
+                                onPanEnd: (_) {
+                                  _isDragging = false;
+                                  // Persist to global state ONLY when drag finishes
+                                  notifier.updateImageStyle(settings.imageStyle.copyWith(textPosY: _dragNotifier.value));
+                                },
+                                onPanCancel: () => _isDragging = false,
                               child: Stack(
                                 fit: StackFit.expand,
                                 children: [
-                                  CustomPaint(
-                                    painter: painter,
-                                    size: Size(constraints.maxWidth, constraints.maxHeight),
+                                  // Only the paint canvas rebuilds rapidly on drag
+                                  ValueListenableBuilder<double>(
+                                    valueListenable: _dragNotifier,
+                                    builder: (context, dragY, _) {
+                                      final localPainter = HadithPreviewPainter(
+                                        hadith: widget.hadith,
+                                        style: settings.imageStyle.copyWith(textPosY: dragY),
+                                        isRtl: settings.language == AppConstants.langAr,
+                                        titleString: settings.language == AppConstants.langAr 
+                                            ? 'قال رسول الله ﷺ' 
+                                            : 'The Messenger of Allah ﷺ said:',
+                                        sourceString: settings.language == AppConstants.langAr
+                                            ? 'رواه ${widget.hadith.getLocalizedBookName(true)}'
+                                            : 'Narrated by ${widget.hadith.getLocalizedBookName(false)}',
+                                      );
+                                      return RepaintBoundary(
+                                        child: CustomPaint(
+                                          painter: localPainter,
+                                          size: Size(constraints.maxWidth, constraints.maxHeight),
+                                        ),
+                                      );
+                                    },
                                   ),
                                   // Drag hint
                                   Positioned(
@@ -163,46 +187,29 @@ class _DesignEditorScreenState extends ConsumerState<DesignEditorScreen> {
                   ),
                 ),
 
-                // Regenerate (same hadith, new design)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.autorenew_rounded),
-                    label: Text(l10n.regenerateStyle),
-                    onPressed: _applying
-                        ? null
-                        : () {
-                            ref
-                                .read(hadithFetchProvider.notifier)
-                                .regenerateCurrentHadith();
-                            Navigator.of(context).pop();
-                          },
-                  ),
-                ),
-
                 // Background style
                 _Section(
                   title: l10n.editorBackground,
                   child: Wrap(
                     spacing: 8,
                     children: [
-                      _Chip(l10n.settingsBgWarm,   0, settings.bgStyleIndex, (i) => notifier.setBgStyle(i)),
-                      _Chip(l10n.settingsBgDark,   1, settings.bgStyleIndex, (i) => notifier.setBgStyle(i)),
-                      _Chip(l10n.settingsBgLight,  2, settings.bgStyleIndex, (i) => notifier.setBgStyle(i)),
-                      _Chip(l10n.settingsBgCustom, 3, settings.bgStyleIndex, (i) => notifier.setBgStyle(i)),
+                      _Chip(l10n.settingsBgWarm,   0, settings.imageStyle.bgStyleIndex, (i) => notifier.setBgStyle(i)),
+                      _Chip(l10n.settingsBgDark,   1, settings.imageStyle.bgStyleIndex, (i) => notifier.setBgStyle(i)),
+                      _Chip(l10n.settingsBgLight,  2, settings.imageStyle.bgStyleIndex, (i) => notifier.setBgStyle(i)),
+                      _Chip(l10n.settingsBgCustom, 3, settings.imageStyle.bgStyleIndex, (i) => notifier.setBgStyle(i)),
                     ],
                   ),
                 ),
 
                 // Custom colors
-                if (settings.bgStyleIndex == 3) ...[
+                if (settings.imageStyle.bgStyleIndex == 3) ...[
                   _Section(
                     title: l10n.editorBgColors,
                     child: Wrap(
                       spacing: 10, runSpacing: 8,
                       children: [
-                        _ColorBtn(l10n.colorTop,    settings.bgColor1,  (c) => notifier.setBgColor1(c)),
-                        _ColorBtn(l10n.colorBottom, settings.bgColor2,  (c) => notifier.setBgColor2(c)),
+                        _ColorBtn(l10n.colorTop,    settings.imageStyle.bgColor1 ?? const Color(0xFFF5DEB3),  (c) => notifier.setBgColor1(c)),
+                        _ColorBtn(l10n.colorBottom, settings.imageStyle.bgColor2 ?? const Color(0xFF8B5E3C),  (c) => notifier.setBgColor2(c)),
                       ],
                     ),
                   ),
@@ -211,8 +218,8 @@ class _DesignEditorScreenState extends ConsumerState<DesignEditorScreen> {
                     child: Wrap(
                       spacing: 10, runSpacing: 8,
                       children: [
-                        _ColorBtn(l10n.colorHadithText,   settings.textColor,  (c) => notifier.setTextColor(c)),
-                        _ColorBtn(l10n.colorTitleSource,  settings.titleColor, (c) => notifier.setTitleColor(c)),
+                        _ColorBtn(l10n.colorHadithText,   settings.imageStyle.textColor  ?? const Color(0xFF2C1A0E),  (c) => notifier.setTextColor(c)),
+                        _ColorBtn(l10n.colorTitleSource,  settings.imageStyle.titleColor ?? const Color(0xFF8B4513), (c) => notifier.setTitleColor(c)),
                       ],
                     ),
                   ),
@@ -220,11 +227,11 @@ class _DesignEditorScreenState extends ConsumerState<DesignEditorScreen> {
 
                 // Font size
                 _Section(
-                  title: '${l10n.editorFontSize} — ${(settings.fontScale * 100).toInt()}%',
+                  title: '${l10n.editorFontSize} — ${(settings.imageStyle.fontScale * 100).toInt()}%',
                   child: Slider(
-                    value: settings.fontScale,
+                    value: settings.imageStyle.fontScale,
                     min: 0.6, max: 1.5, divisions: 9,
-                    label: '${(settings.fontScale * 100).toInt()}%',
+                    label: '${(settings.imageStyle.fontScale * 100).toInt()}%',
                     onChanged: (v) => notifier.setFontScale(v),
                   ),
                 ),
@@ -235,9 +242,9 @@ class _DesignEditorScreenState extends ConsumerState<DesignEditorScreen> {
                   child: Wrap(
                     spacing: 8,
                     children: [
-                      _Chip(l10n.settingsTextAlignCenter, 0, settings.textAlignIndex, (i) => notifier.setTextAlign(i)),
-                      _Chip(l10n.settingsTextAlignRight,  1, settings.textAlignIndex, (i) => notifier.setTextAlign(i)),
-                      _Chip(l10n.settingsTextAlignLeft,   2, settings.textAlignIndex, (i) => notifier.setTextAlign(i)),
+                      _Chip(l10n.settingsTextAlignCenter, 0, settings.imageStyle.textAlignIndex, (i) => notifier.setTextAlign(i)),
+                      _Chip(l10n.settingsTextAlignRight,  1, settings.imageStyle.textAlignIndex, (i) => notifier.setTextAlign(i)),
+                      _Chip(l10n.settingsTextAlignLeft,   2, settings.imageStyle.textAlignIndex, (i) => notifier.setTextAlign(i)),
                     ],
                   ),
                 ),
@@ -257,7 +264,7 @@ class _DesignEditorScreenState extends ConsumerState<DesignEditorScreen> {
 
   Future<void> _applyStyle(AppLocalizations l10n) async {
     setState(() => _applying = true);
-    await ref.read(hadithFetchProvider.notifier).regenerateCurrentHadith();
+    await ref.read(hadithFetchProvider.notifier).regenerateCurrentHadith(forceWallpaper: true);
     if (mounted) {
       setState(() => _applying = false);
       Navigator.of(context).pop();

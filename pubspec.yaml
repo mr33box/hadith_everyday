@@ -58,12 +58,15 @@ flutter:
   assets:
     - .env
     - assets/hadiths.json
-    - assets/icon.png
+    - assets/Icon.png
 
   # Enable localization generation
   generate: true
 
 flutter_launcher_icons:
-  android: true
+  android: "launcher_icon"
   ios: true
-  image_path: "assets/icon.png"
+  image_path: "assets/Icon.png"
+  adaptive_icon_background: "#1a1a2e"
+  adaptive_icon_foreground: "assets/Icon.png"
+  min_sdk_android: 21

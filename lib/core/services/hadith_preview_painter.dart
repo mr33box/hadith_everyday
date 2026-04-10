@@ -2,37 +2,26 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:hadith_everyday/core/services/image_generator.dart';
 import 'package:hadith_everyday/domain/entities/hadith_entity.dart';
+import 'package:hadith_everyday/domain/entities/image_style.dart';
 
 /// Synchronous CustomPainter for instant live preview in the editor.
 /// Mirrors the HadithImageGenerator rendering — no file I/O.
 class HadithPreviewPainter extends CustomPainter {
   const HadithPreviewPainter({
     required this.hadith,
-    required this.bgStyle,
-    required this.fontScale,
-    required this.textAlign,
+    required this.style,
     required this.titleString,
     required this.sourceString,
     required this.isRtl,
-    this.customBgColor1,
-    this.customBgColor2,
-    this.customTextColor,
-    this.customTitleColor,
-    this.textOffsetFraction = const Offset(0.5, 0.5),
   });
 
   final HadithEntity hadith;
-  final BgStyle bgStyle;
-  final double fontScale;
-  final TextAlign textAlign;
+  final ImageStyle style;
   final String titleString;
   final String sourceString;
   final bool isRtl;
-  final Color? customBgColor1;
-  final Color? customBgColor2;
-  final Color? customTextColor;
-  final Color? customTitleColor;
-  final Offset textOffsetFraction;
+
+  BgStyle get bgStyle => BgStyle.values[style.bgStyleIndex.clamp(0, BgStyle.values.length - 1)];
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -46,31 +35,31 @@ class HadithPreviewPainter extends CustomPainter {
     );
 
     // ── Decorative circles ──────────────────────────────────────────────────
-    final gColor = (customTitleColor ?? _goldColor).withOpacity(0.10);
+    final gColor = (style.titleColor ?? _goldColor).withOpacity(0.10);
     canvas.drawCircle(Offset.zero, w * 0.18, Paint()..color = gColor);
     canvas.drawCircle(Offset(w, h), w * 0.22, Paint()..color = gColor);
 
     // ── Font sizes (scaled to canvas width) ─────────────────────────────────
-    final titleSize  = 20.0 * fontScale * (w / 400);
-    final bodySize   = _autoBodySize(hadith.arabicText.length, fontScale) * (w / 400);
-    final sourceSize = 14.0 * fontScale * (w / 400);
+    final titleSize  = 20.0 * style.fontScale * (w / 400);
+    final bodySize   = _autoBodySize(hadith.getLocalizedText(isRtl).length, style.fontScale) * (w / 400);
+    final sourceSize = 14.0 * style.fontScale * (w / 400);
 
-    final titleCol  = customTitleColor ?? _goldColor;
-    final bodyCol   = customTextColor  ?? _bodyColor;
+    final titleCol  = style.titleColor ?? _goldColor;
+    final bodyCol   = style.textColor ?? _bodyColor;
     final padH      = w * 0.08;
     final maxW      = w - padH * 2;
 
     // ── Text painters ───────────────────────────────────────────────────────
     final titleP = _tp(titleString, titleSize, titleCol,
         FontWeight.w700, TextAlign.center, maxW);
-    final bodyP  = _tp(hadith.arabicText, bodySize, bodyCol,
-        FontWeight.normal, textAlign, maxW);
+    final bodyP  = _tp(hadith.getLocalizedText(isRtl), bodySize, bodyCol,
+        FontWeight.normal, style.alignment, maxW);
     final srcP   = _tp(sourceString, sourceSize,
         titleCol.withOpacity(0.85), FontWeight.w500, TextAlign.center, maxW);
 
-    titleP.layout(maxWidth: maxW);
-    bodyP.layout(maxWidth: maxW);
-    srcP.layout(maxWidth: maxW);
+    titleP.layout(minWidth: maxW, maxWidth: maxW);
+    bodyP.layout(minWidth: maxW, maxWidth: maxW);
+    srcP.layout(minWidth: maxW, maxWidth: maxW);
 
     // ── Vertical centering ──────────────────────────────────────────────────
     const divH    = 0.003;
@@ -79,8 +68,10 @@ class HadithPreviewPainter extends CustomPainter {
     final gapBS   = h * 0.022;
     final totalH  = titleP.height + gapTD + h * divH + gapDB +
         bodyP.height + gapBS + srcP.height;
-    final range   = (h - totalH).clamp(0.0, h);
-    final startY  = textOffsetFraction.dy * range;
+    final double defaultStartY = (h - totalH) / 2;
+    // Map textPosY fraction to actual pixel bounds representing the anchor center
+    final double centerOffsetPixels = (style.textPosY * h) - (h / 2);
+    final double startY = (defaultStartY + centerOffsetPixels).clamp(h * 0.05, h * 0.85);
 
     final divY    = startY + titleP.height + gapTD;
     final bodyY   = divY + h * divH + gapDB;
@@ -112,14 +103,7 @@ class HadithPreviewPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(HadithPreviewPainter old) =>
-      old.bgStyle != bgStyle ||
-      old.fontScale != fontScale ||
-      old.textAlign != textAlign ||
-      old.customBgColor1 != customBgColor1 ||
-      old.customBgColor2 != customBgColor2 ||
-      old.customTextColor != customTextColor ||
-      old.customTitleColor != customTitleColor ||
-      old.textOffsetFraction != textOffsetFraction ||
+      old.style != style ||
       old.hadith.id != hadith.id;
 
   // ── Private helpers ────────────────────────────────────────────────────────
@@ -141,12 +125,12 @@ class HadithPreviewPainter extends CustomPainter {
   ui.Gradient _gradient(double w, double h) {
     final List<Color> cols;
     if (bgStyle == BgStyle.custom &&
-        customBgColor1 != null &&
-        customBgColor2 != null) {
+        style.bgColor1 != null &&
+        style.bgColor2 != null) {
       cols = [
-        customBgColor1!,
-        Color.lerp(customBgColor1!, customBgColor2!, 0.4)!,
-        customBgColor2!,
+        style.bgColor1!,
+        Color.lerp(style.bgColor1!, style.bgColor2!, 0.4)!,
+        style.bgColor2!,
       ];
     } else {
       cols = switch (bgStyle) {
