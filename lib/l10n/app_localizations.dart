@@ -595,6 +595,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Total: {count}'**
   String totalHadiths(int count);
+
+  /// No description provided for @aboutApp.
+  ///
+  /// In en, this message translates to:
+  /// **'About App'**
+  String get aboutApp;
+
+  /// No description provided for @aboutAppDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Hadith app that helps you remember and reflect every day.'**
+  String get aboutAppDesc;
+
+  /// No description provided for @featureDaily.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily hadith'**
+  String get featureDaily;
+
+  /// No description provided for @featureWallpaper.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallpaper update'**
+  String get featureWallpaper;
+
+  /// No description provided for @featureCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom design'**
+  String get featureCustom;
+
+  /// No description provided for @onboardingWelcome.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to Daily Hadith'**
+  String get onboardingWelcome;
+
+  /// No description provided for @onboardingUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'App updates your wallpaper with a new hadith every 24 hours'**
+  String get onboardingUpdate;
+
+  /// No description provided for @onboardingCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'You can fully customize the wallpaper design'**
+  String get onboardingCustom;
+
+  /// No description provided for @startButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get startButton;
 }
 
 class _AppLocalizationsDelegate

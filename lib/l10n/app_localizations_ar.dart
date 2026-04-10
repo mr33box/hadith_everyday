@@ -258,4 +258,33 @@ class AppLocalizationsAr extends AppLocalizations {
   String totalHadiths(int count) {
     return 'المجموع: $count';
   }
+
+  @override
+  String get aboutApp => 'حول التطبيق';
+
+  @override
+  String get aboutAppDesc =>
+      'تطبيق حديث اليوم يساعدك على التذكر والتأمل كل يوم.';
+
+  @override
+  String get featureDaily => 'حديث يومي';
+
+  @override
+  String get featureWallpaper => 'تحديث الخلفية';
+
+  @override
+  String get featureCustom => 'تصميم مخصص';
+
+  @override
+  String get onboardingWelcome => 'مرحباً بك في حديث اليوم';
+
+  @override
+  String get onboardingUpdate =>
+      'يقوم التطبيق بتحديث خلفية هاتفك بحديث جديد كل ٢٤ ساعة';
+
+  @override
+  String get onboardingCustom => 'يمكنك تخصيص تصميم الخلفية بالكامل';
+
+  @override
+  String get startButton => 'ابدأ';
 }

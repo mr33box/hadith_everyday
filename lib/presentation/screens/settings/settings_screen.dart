@@ -54,7 +54,13 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                 ],
                 selected: {settings.language},
-                onSelectionChanged: (s) => notifier.setLanguage(s.first),
+                onSelectionChanged: (s) async {
+                  final lang = s.first;
+                  if (settings.language != lang) {
+                    await notifier.setLanguage(lang);
+                    ref.read(hadithFetchProvider.notifier).regenerateCurrentHadith(forceWallpaper: true);
+                  }
+                },
               ),
             ),
 
@@ -105,6 +111,33 @@ class SettingsScreen extends ConsumerWidget {
                   ? () => context.pushNamed('editor',
                       extra: fetchState.hadith!)
                   : null,
+            ),
+
+            const SizedBox(height: 16),
+
+            // ── About App ────────────────────────────────────────────────────
+            _SectionHeader(label: l10n.aboutApp),
+            
+            Card(
+              margin: const EdgeInsets.symmetric(vertical: 4),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.aboutAppDesc,
+                      style: theme.textTheme.bodyMedium?.copyWith(height: 1.5),
+                    ),
+                    const SizedBox(height: 16),
+                    _FeatureRow(icon: Icons.auto_awesome_rounded, text: l10n.featureDaily),
+                    const SizedBox(height: 8),
+                    _FeatureRow(icon: Icons.wallpaper_rounded, text: l10n.featureWallpaper),
+                    const SizedBox(height: 8),
+                    _FeatureRow(icon: Icons.color_lens_rounded, text: l10n.featureCustom),
+                  ],
+                ),
+              ),
             ),
 
             const SizedBox(height: 40),
@@ -254,6 +287,26 @@ class _IntervalSelector extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ─── Feature Row ──────────────────────────────────────────────────────────────
+
+class _FeatureRow extends StatelessWidget {
+  const _FeatureRow({required this.icon, required this.text});
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: theme.colorScheme.primary),
+        const SizedBox(width: 12),
+        Expanded(child: Text(text, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500))),
+      ],
     );
   }
 }

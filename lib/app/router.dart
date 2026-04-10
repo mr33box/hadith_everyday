@@ -6,6 +6,7 @@ import 'package:hadith_everyday/presentation/screens/gallery/gallery_screen.dart
 import 'package:hadith_everyday/presentation/screens/home/home_screen.dart';
 import 'package:hadith_everyday/presentation/screens/settings/settings_screen.dart';
 import 'package:hadith_everyday/presentation/screens/splash/splash_screen.dart';
+import 'package:hadith_everyday/presentation/screens/onboarding/onboarding_screen.dart';
 
 class AppRoutes {
   static const String splash   = '/';
@@ -13,6 +14,7 @@ class AppRoutes {
   static const String settings = '/settings';
   static const String editor   = '/editor';
   static const String gallery  = '/gallery';
+  static const String onboarding = '/onboarding';
 }
 
 final appRouter = GoRouter(
@@ -22,6 +24,11 @@ final appRouter = GoRouter(
       path: AppRoutes.splash,
       name: 'splash',
       builder: (context, state) => const SplashScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.onboarding,
+      name: 'onboarding',
+      builder: (context, state) => const OnboardingScreen(),
     ),
     GoRoute(
       path: AppRoutes.home,

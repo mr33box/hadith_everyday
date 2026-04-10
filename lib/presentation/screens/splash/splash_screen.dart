@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hadith_everyday/app/router.dart';
+import 'package:hadith_everyday/core/constants/app_constants.dart';
 
 /// Animated splash screen shown on first launch.
 class SplashScreen extends StatefulWidget {
@@ -47,7 +49,15 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward().then((_) async {
       await Future.delayed(const Duration(milliseconds: 600));
-      if (mounted) context.goNamed('home');
+      if (mounted) {
+        final prefs = await SharedPreferences.getInstance();
+        final isFirstLaunch = prefs.getBool(AppConstants.prefKeyIsFirstLaunch) ?? true;
+        if (isFirstLaunch) {
+          context.goNamed('onboarding');
+        } else {
+          context.goNamed('home');
+        }
+      }
     });
   }
 

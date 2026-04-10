@@ -7,6 +7,7 @@ class AppConstants {
   static const String settingsBoxName = 'settings';
 
   // ─── SharedPreferences Keys ────────────────────────────────────────────────
+  static const String prefKeyIsFirstLaunch = 'is_first_launch';
   static const String prefKeyDarkMode = 'dark_mode';
   static const String prefKeyLanguage = 'language';
   static const String prefKeyAutoWallpaper = 'auto_wallpaper';

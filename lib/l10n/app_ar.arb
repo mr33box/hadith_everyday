@@ -87,5 +87,14 @@
     "placeholders": {
       "count": { "type": "int" }
     }
-  }
+  },
+  "aboutApp": "حول التطبيق",
+  "aboutAppDesc": "تطبيق حديث اليوم يساعدك على التذكر والتأمل كل يوم.",
+  "featureDaily": "حديث يومي",
+  "featureWallpaper": "تحديث الخلفية",
+  "featureCustom": "تصميم مخصص",
+  "onboardingWelcome": "مرحباً بك في حديث اليوم",
+  "onboardingUpdate": "يقوم التطبيق بتحديث خلفية هاتفك بحديث جديد كل ٢٤ ساعة",
+  "onboardingCustom": "يمكنك تخصيص تصميم الخلفية بالكامل",
+  "startButton": "ابدأ"
 }

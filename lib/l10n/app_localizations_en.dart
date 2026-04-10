@@ -261,4 +261,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String totalHadiths(int count) {
     return 'Total: $count';
   }
+
+  @override
+  String get aboutApp => 'About App';
+
+  @override
+  String get aboutAppDesc =>
+      'Daily Hadith app that helps you remember and reflect every day.';
+
+  @override
+  String get featureDaily => 'Daily hadith';
+
+  @override
+  String get featureWallpaper => 'Wallpaper update';
+
+  @override
+  String get featureCustom => 'Custom design';
+
+  @override
+  String get onboardingWelcome => 'Welcome to Daily Hadith';
+
+  @override
+  String get onboardingUpdate =>
+      'App updates your wallpaper with a new hadith every 24 hours';
+
+  @override
+  String get onboardingCustom => 'You can fully customize the wallpaper design';
+
+  @override
+  String get startButton => 'Start';
 }

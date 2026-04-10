@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:hadith_everyday/core/services/image_generator.dart';
 import 'package:hadith_everyday/domain/entities/hadith_entity.dart';
 import 'package:hadith_everyday/presentation/providers/hadith_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hadith_everyday/presentation/providers/settings_provider.dart';
 import 'package:hadith_everyday/core/services/wallpaper_service.dart';
+import 'package:hadith_everyday/core/services/hadith_preview_painter.dart';
 
 /// The hero card shown at the top of the home screen displaying either
 /// the current fetch progress or the latest generated hadith image.
@@ -120,59 +123,40 @@ class _LoadingCardState extends State<_LoadingCard>
 
 // ── Hadith Preview Card ───────────────────────────────────────────────────────
 
-class _HadithPreviewCard extends StatelessWidget {
+class _HadithPreviewCard extends ConsumerWidget {
   const _HadithPreviewCard({super.key, required this.hadith, required this.isRtl});
   final HadithEntity hadith;
   final bool isRtl;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final hasImage = hadith.imagePath != null &&
-        File(hadith.imagePath!).existsSync();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentStyle = ref.watch(settingsProvider).imageStyle;
+
+    // Override position to always center for the home preview
+    final displayStyle = currentStyle.copyWith(
+      textPosX: 0.5,
+      textPosY: 0.5,
+    );
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(24),
       child: Stack(
         children: [
-          // Background image or gradient placeholder
-          if (hasImage)
-            SizedBox(
-              width: double.infinity,
-              height: 260,
-              child: Image.file(
-                File(hadith.imagePath!),
-                fit: BoxFit.cover,
-              ),
-            )
-          else
-            Container(
-              height: 260,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    const Color(0xFFF5DEB3),
-                    const Color(0xFFC8965C),
-                  ],
-                ),
-              ),
-              child: Center(
-                child: Directionality(
-                  textDirection: TextDirection.rtl,
-                  child: Text(
-                    hadith.arabicPreview,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      color: Color(0xFF2C1A0E),
-                      height: 1.7,
-                    ),
-                  ),
-                ),
+          SizedBox(
+            width: double.infinity,
+            height: 260,
+            child: CustomPaint(
+              painter: HadithPreviewPainter(
+                hadith: hadith,
+                style: displayStyle,
+                titleString: isRtl ? 'قال رسول الله ﷺ' : 'The Messenger of Allah ﷺ said:',
+                sourceString: isRtl
+                    ? 'رواه ${hadith.getLocalizedBookName(true)}'
+                    : 'Narrated by ${hadith.getLocalizedBookName(false)}',
+                isRtl: isRtl,
               ),
             ),
+          ),
 
           // Gradient overlay at the bottom
           Positioned(

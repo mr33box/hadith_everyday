@@ -87,5 +87,14 @@
     "placeholders": {
       "count": { "type": "int" }
     }
-  }
+  },
+  "aboutApp": "About App",
+  "aboutAppDesc": "Daily Hadith app that helps you remember and reflect every day.",
+  "featureDaily": "Daily hadith",
+  "featureWallpaper": "Wallpaper update",
+  "featureCustom": "Custom design",
+  "onboardingWelcome": "Welcome to Daily Hadith",
+  "onboardingUpdate": "App updates your wallpaper with a new hadith every 24 hours",
+  "onboardingCustom": "You can fully customize the wallpaper design",
+  "startButton": "Start"
 }
